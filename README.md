@@ -1,4 +1,14 @@
-# claude-desktop-buddy
+# claude-desktop-buddy (M5StickS3 fork)
+
+> **This is a fork ported to the [M5StickS3](https://docs.m5stack.com/en/core/StickS3)
+> (ESP32-S3).** The upstream firmware at
+> [anthropics/claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy)
+> targets the M5StickC Plus (ESP32 + AXP192 + MPU6886) and depends on the
+> `M5StickCPlus` library. The S3 has a different PMIC, no external RTC chip,
+> and uses native USB CDC, so the firmware needed a port to
+> [`M5Unified`](https://github.com/m5stack/M5Unified).
+> See the full set of changes in
+> [this commit](https://github.com/shennongjushi/claude-desktop-buddy/commit/main).
 
 Claude for macOS and Windows can connect Claude Cowork and Claude Code to
 maker devices over BLE, so developers and makers can build hardware that
@@ -22,10 +32,18 @@ waiting, and lets you approve or deny right from the device.
 
 ## Hardware
 
-The firmware targets ESP32 with the Arduino framework. As written, it
-depends on the M5StickCPlus library for its display, IMU, and button
-drivers—so you'll need that board, or a fork that swaps those drivers for
-your own pin layout.
+This fork targets the **M5StickS3** (ESP32-S3-PICO, built-in IMU, TFT,
+speaker, IR). It uses the [`M5Unified`](https://github.com/m5stack/M5Unified)
++ [`M5GFX`](https://github.com/m5stack/M5GFX) libraries instead of the
+M5StickCPlus library.
+
+Key differences from the upstream (M5StickC Plus) build:
+
+- **No external RTC** on the S3 — time is maintained as a local `time_t` +
+  `millis()` offset, synced from the `{"time":[...]}` JSON push.
+- **PMIC abstraction** via `M5.Power` (no `M5.Axp`).
+- **Charging-state detection** uses asymmetric debouncing, because S3's
+  `isCharging()` cycles every few seconds at full battery (trickle charge).
 
 ## Flashing
 
@@ -34,13 +52,14 @@ Install
 then:
 
 ```bash
-pio run -t upload
+pio run -e m5sticks3 -t upload
+pio device monitor -e m5sticks3
 ```
 
 If you're starting from a previously-flashed device, wipe it first:
 
 ```bash
-pio run -t erase && pio run -t upload
+pio run -e m5sticks3 -t erase && pio run -e m5sticks3 -t upload
 ```
 
 Once running, you can also wipe everything from the device itself: **hold A
