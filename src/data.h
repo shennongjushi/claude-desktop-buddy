@@ -76,15 +76,17 @@ static void _applyJson(const char* line, TamaState* out) {
   // adjusted epoch yields local components including weekday.
   JsonArray t = doc["time"];
   if (!t.isNull() && t.size() == 2) {
-    time_t local = (time_t)t[0].as<uint32_t>() + (int32_t)t[1];
-    struct tm lt; gmtime_r(&local, &lt);
-    RTC_TimeTypeDef tm = { (uint8_t)lt.tm_hour, (uint8_t)lt.tm_min, (uint8_t)lt.tm_sec };
-    RTC_DateTypeDef dt = { (uint8_t)lt.tm_wday, (uint8_t)(lt.tm_mon + 1),
-                           (uint8_t)lt.tm_mday, (uint16_t)(lt.tm_year + 1900) };
-    M5.Rtc.SetTime(&tm);
-    M5.Rtc.SetDate(&dt);
+    // M5StickS3 has no hardware RTC — M5.Rtc.setDate/setTime are no-ops
+    // on this device, and reading back returns garbage. Maintain our own
+    // epoch reference and derive time from millis() elapsed.
+    extern time_t _epochBase;
+    extern uint32_t _epochMs;
+    extern bool _epochValid;
     extern uint32_t _clkLastRead;
-    _clkLastRead = 0;   // force re-read so _clkDt and _rtcValid agree
+    _epochBase = (time_t)t[0].as<uint32_t>() + (int32_t)t[1];
+    _epochMs   = millis();
+    _epochValid = true;
+    _clkLastRead = 0;
     _rtcValid = true;
     _lastLiveMs = millis();
     return;
